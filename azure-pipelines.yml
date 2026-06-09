@@ -7,11 +7,14 @@ pool:
 
 steps:
 
+# Terraform Install
 - task: TerraformInstaller@1
   inputs:
     terraformVersion: '1.10.5'
 
+# Terraform Init
 - task: TerraformTask@5
+  displayName: 'Terraform Init'
   inputs:
     provider: 'azurerm'
     command: 'init'
@@ -20,3 +23,65 @@ steps:
     backendAzureRmStorageAccountName: 'gauravbackupstorage'
     backendAzureRmContainerName: 'tfstate'
     backendAzureRmKey: 'backup.tfstate'
+
+# Terraform Validate
+- task: TerraformTask@5
+  displayName: 'Terraform Validate'
+  inputs:
+    provider: 'azurerm'
+    command: 'validate'
+    workingDirectory: '$(Build.SourcesDirectory)'
+
+# Install TFLint
+- powershell: |
+    choco install tflint -y
+    tflint --version
+  displayName: 'Install TFLint'
+
+# Run TFLint
+- powershell: |
+    cd $(Build.SourcesDirectory)
+    tflint
+  displayName: 'Run TFLint'
+
+# Install tfsec
+- powershell: |
+    choco install tfsec -y
+    tfsec --version
+  displayName: 'Install tfsec'
+
+# Run tfsec
+- powershell: |
+    cd $(Build.SourcesDirectory)
+    tfsec .
+  displayName: 'Run tfsec'
+
+# Install Checkov
+- powershell: |
+    pip install checkov
+    checkov --version
+  displayName: 'Install Checkov'
+
+# Run Checkov
+- powershell: |
+    cd $(Build.SourcesDirectory)
+    checkov -d .
+  displayName: 'Run Checkov'
+
+# Terraform Plan
+- task: TerraformTask@5
+  displayName: 'Terraform Plan'
+  inputs:
+    provider: 'azurerm'
+    command: 'plan'
+    workingDirectory: '$(Build.SourcesDirectory)'
+    environmentServiceNameAzureRM: 'automation'
+
+# Terraform Apply
+- task: TerraformTask@5
+  displayName: 'Terraform Apply'
+  inputs:
+    provider: 'azurerm'
+    command: 'apply'
+    workingDirectory: '$(Build.SourcesDirectory)'
+    environmentServiceNameAzureRM: 'automation'
