@@ -32,16 +32,7 @@ steps:
     command: 'validate'
     workingDirectory: '$(Build.SourcesDirectory)'
 
-# Install TFLint
-- task: PowerShell@2
-  displayName: 'Install TFLint'
-  inputs:
-    targetType: 'inline'
-    script: |
-      choco install tflint -y
-      tflint --version
-
-# Run TFLint
+# TFLint
 - task: PowerShell@2
   displayName: 'Run TFLint'
   inputs:
@@ -51,16 +42,7 @@ steps:
       tflint --init
       tflint
 
-# Install tfsec
-- task: PowerShell@2
-  displayName: 'Install tfsec'
-  inputs:
-    targetType: 'inline'
-    script: |
-      choco install tfsec -y
-      tfsec --version
-
-# Run tfsec
+# tfsec
 - task: PowerShell@2
   displayName: 'Run tfsec'
   inputs:
@@ -69,17 +51,7 @@ steps:
     script: |
       tfsec .
 
-# Install Checkov
-- task: PowerShell@2
-  displayName: 'Install Checkov'
-  inputs:
-    targetType: 'inline'
-    script: |
-      python -m pip install --upgrade pip
-      pip install checkov
-      checkov --version
-
-# Run Checkov
+# Checkov
 - task: PowerShell@2
   displayName: 'Run Checkov'
   inputs:
