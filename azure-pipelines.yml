@@ -6,17 +6,17 @@ pool:
 
 steps:
 
-# Checkout Code
+# Checkout Repository
 - checkout: self
 
-# Debug Repository
+# Debug Repository Structure
 - task: PowerShell@2
-  displayName: 'Show Repository Files'
+  displayName: 'Show Terraform Files'
   inputs:
     targetType: 'inline'
     script: |
-      Write-Host "Source Directory: $(Build.SourcesDirectory)"
-      Get-ChildItem -Path "$(Build.SourcesDirectory)" -Recurse
+      Write-Host "Build.SourcesDirectory = $(Build.SourcesDirectory)"
+      Get-ChildItem "$(Build.SourcesDirectory)" -Recurse
 
 # Install Terraform
 - task: TerraformInstaller@1
@@ -43,31 +43,13 @@ steps:
       pip install checkov
       checkov --version
 
-# Install TFLint
-- task: PowerShell@2
-  displayName: 'Install TFLint'
-  inputs:
-    targetType: 'inline'
-    script: |
-      winget install --id TerraformLinters.TFLint -e --accept-package-agreements --accept-source-agreements
-      tflint --version
-
-# Install tfsec
-- task: PowerShell@2
-  displayName: 'Install tfsec'
-  inputs:
-    targetType: 'inline'
-    script: |
-      winget install --id AquaSecurity.tfsec -e --accept-package-agreements --accept-source-agreements
-      tfsec --version
-
 # Terraform Init
 - task: TerraformTask@5
   displayName: 'Terraform Init'
   inputs:
     provider: 'azurerm'
     command: 'init'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
     backendServiceArm: 'automation'
     backendAzureRmStorageAccountName: 'gauravbackupstorage'
     backendAzureRmContainerName: 'tfstate'
@@ -79,14 +61,14 @@ steps:
   inputs:
     provider: 'azurerm'
     command: 'validate'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
 
 # Run TFLint
 - task: PowerShell@2
   displayName: 'Run TFLint'
   inputs:
     targetType: 'inline'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
     script: |
       tflint --init
       tflint
@@ -100,7 +82,7 @@ steps:
   displayName: 'Run tfsec'
   inputs:
     targetType: 'inline'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
     script: |
       tfsec .
       if ($LASTEXITCODE -ne 0) {
@@ -113,7 +95,7 @@ steps:
   displayName: 'Run Checkov'
   inputs:
     targetType: 'inline'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
     script: |
       checkov -d .
       if ($LASTEXITCODE -ne 0) {
@@ -127,7 +109,7 @@ steps:
   inputs:
     provider: 'azurerm'
     command: 'plan'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
     environmentServiceNameAzureRM: 'automation'
 
 # Terraform Apply
@@ -137,5 +119,5 @@ steps:
   inputs:
     provider: 'azurerm'
     command: 'apply'
-    workingDirectory: '$(Build.SourcesDirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)\tflinttfseccheckov'
     environmentServiceNameAzureRM: 'automation'
