@@ -10,7 +10,7 @@ steps:
   inputs:
     provider: 'azurerm'
     command: 'init'
-    workingDirectory: '$(System.DefaultWorkingDirectory)/TERRAFORMSECURITY/tflinttfseccheckov'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/TERRAFORMSECURITY'
     backendServiceArm: 'automation'
     backendAzureRmStorageAccountName: 'gauravbackupstorage'
     backendAzureRmContainerName: 'tfstate'
