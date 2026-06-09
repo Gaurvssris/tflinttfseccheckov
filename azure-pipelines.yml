@@ -1,4 +1,3 @@
-
 trigger:
 - main
 
@@ -9,6 +8,7 @@ steps:
 
 # Terraform Install
 - task: TerraformInstaller@1
+  displayName: 'Install Terraform'
   inputs:
     terraformVersion: '1.10.5'
 
@@ -33,40 +33,60 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)'
 
 # Install TFLint
-- powershell: |
-    choco install tflint -y
-    tflint --version
+- task: PowerShell@2
   displayName: 'Install TFLint'
+  inputs:
+    targetType: 'inline'
+    script: |
+      choco install tflint -y
+      tflint --version
 
 # Run TFLint
-- powershell: |
-    cd $(Build.SourcesDirectory)
-    tflint
+- task: PowerShell@2
   displayName: 'Run TFLint'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(Build.SourcesDirectory)'
+    script: |
+      tflint --init
+      tflint
 
 # Install tfsec
-- powershell: |
-    choco install tfsec -y
-    tfsec --version
+- task: PowerShell@2
   displayName: 'Install tfsec'
+  inputs:
+    targetType: 'inline'
+    script: |
+      choco install tfsec -y
+      tfsec --version
 
 # Run tfsec
-- powershell: |
-    cd $(Build.SourcesDirectory)
-    tfsec .
+- task: PowerShell@2
   displayName: 'Run tfsec'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(Build.SourcesDirectory)'
+    script: |
+      tfsec .
 
 # Install Checkov
-- powershell: |
-    pip install checkov
-    checkov --version
+- task: PowerShell@2
   displayName: 'Install Checkov'
+  inputs:
+    targetType: 'inline'
+    script: |
+      python -m pip install --upgrade pip
+      pip install checkov
+      checkov --version
 
 # Run Checkov
-- powershell: |
-    cd $(Build.SourcesDirectory)
-    checkov -d .
+- task: PowerShell@2
   displayName: 'Run Checkov'
+  inputs:
+    targetType: 'inline'
+    workingDirectory: '$(Build.SourcesDirectory)'
+    script: |
+      checkov -d .
 
 # Terraform Plan
 - task: TerraformTask@5
