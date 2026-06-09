@@ -53,19 +53,17 @@ steps:
       $url = "https://github.com/terraform-linters/tflint/releases/download/v${tflintVersion}/tflint_windows_amd64.zip"
       $zipPath = "$env:TEMP\tflint.zip"
       $extractPath = "C:\tools\tflint"
-      
+
       Write-Host "Downloading TFLint v${tflintVersion}..."
       Invoke-WebRequest -Uri $url -OutFile $zipPath
-      
+
       if (!(Test-Path $extractPath)) {
         New-Item -ItemType Directory -Path $extractPath | Out-Null
       }
-      
+
       Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-      
       $env:PATH = "$extractPath;$env:PATH"
-      [System.Environment]::SetEnvironmentVariable("PATH", "$extractPath;$([System.Environment]::GetEnvironmentVariable('PATH', 'Machine'))", "Machine")
-      
+
       Write-Host "TFLint installed:"
       & "$extractPath\tflint.exe" --version
 
@@ -78,18 +76,16 @@ steps:
       $tfsecVersion = "1.28.11"
       $url = "https://github.com/aquasecurity/tfsec/releases/download/v${tfsecVersion}/tfsec-windows-amd64.exe"
       $destPath = "C:\tools\tfsec"
-      
+
       Write-Host "Downloading tfsec v${tfsecVersion}..."
-      
+
       if (!(Test-Path $destPath)) {
         New-Item -ItemType Directory -Path $destPath | Out-Null
       }
-      
+
       Invoke-WebRequest -Uri $url -OutFile "$destPath\tfsec.exe"
-      
-      [System.Environment]::SetEnvironmentVariable("PATH", "$destPath;$([System.Environment]::GetEnvironmentVariable('PATH', 'Machine'))", "Machine")
       $env:PATH = "$destPath;$env:PATH"
-      
+
       Write-Host "tfsec installed:"
       & "$destPath\tfsec.exe" --version
 
@@ -121,13 +117,13 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)/tflinttfseccheckov'
     script: |
       $env:PATH = "C:\tools\tflint;$env:PATH"
-      
+
       Write-Host "Initializing TFLint plugins..."
       tflint --init
-      
+
       Write-Host "Running TFLint..."
       tflint --format=default
-      
+
       if ($LASTEXITCODE -ne 0) {
         Write-Error "TFLint found issues. Failing pipeline."
         exit 1
@@ -142,10 +138,10 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)/tflinttfseccheckov'
     script: |
       $env:PATH = "C:\tools\tfsec;$env:PATH"
-      
+
       Write-Host "Running tfsec..."
       tfsec . --format lovely
-      
+
       if ($LASTEXITCODE -ne 0) {
         Write-Error "tfsec found security issues. Failing pipeline."
         exit 1
@@ -161,7 +157,7 @@ steps:
     script: |
       Write-Host "Running Checkov..."
       checkov -d . --framework terraform
-      
+
       if ($LASTEXITCODE -ne 0) {
         Write-Error "Checkov found policy violations. Failing pipeline."
         exit 1
