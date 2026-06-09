@@ -6,11 +6,60 @@ pool:
 
 steps:
 
-# Terraform Install
+# Checkout Code
+- checkout: self
+
+# Debug Repository
+- task: PowerShell@2
+  displayName: 'Show Repository Files'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Source Directory: $(Build.SourcesDirectory)"
+      Get-ChildItem -Path "$(Build.SourcesDirectory)" -Recurse
+
+# Install Terraform
 - task: TerraformInstaller@1
   displayName: 'Install Terraform'
   inputs:
     terraformVersion: '1.10.5'
+
+# Verify Python
+- task: PowerShell@2
+  displayName: 'Verify Python'
+  inputs:
+    targetType: 'inline'
+    script: |
+      python --version
+      pip --version
+
+# Install Checkov
+- task: PowerShell@2
+  displayName: 'Install Checkov'
+  inputs:
+    targetType: 'inline'
+    script: |
+      python -m pip install --upgrade pip
+      pip install checkov
+      checkov --version
+
+# Install TFLint
+- task: PowerShell@2
+  displayName: 'Install TFLint'
+  inputs:
+    targetType: 'inline'
+    script: |
+      winget install --id TerraformLinters.TFLint -e --accept-package-agreements --accept-source-agreements
+      tflint --version
+
+# Install tfsec
+- task: PowerShell@2
+  displayName: 'Install tfsec'
+  inputs:
+    targetType: 'inline'
+    script: |
+      winget install --id AquaSecurity.tfsec -e --accept-package-agreements --accept-source-agreements
+      tfsec --version
 
 # Terraform Init
 - task: TerraformTask@5
@@ -32,7 +81,7 @@ steps:
     command: 'validate'
     workingDirectory: '$(Build.SourcesDirectory)'
 
-# TFLint
+# Run TFLint
 - task: PowerShell@2
   displayName: 'Run TFLint'
   inputs:
@@ -41,8 +90,12 @@ steps:
     script: |
       tflint --init
       tflint
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "TFLint failed"
+        exit 1
+      }
 
-# tfsec
+# Run tfsec
 - task: PowerShell@2
   displayName: 'Run tfsec'
   inputs:
@@ -50,8 +103,12 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)'
     script: |
       tfsec .
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "tfsec failed"
+        exit 1
+      }
 
-# Checkov
+# Run Checkov
 - task: PowerShell@2
   displayName: 'Run Checkov'
   inputs:
@@ -59,6 +116,10 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)'
     script: |
       checkov -d .
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "Checkov failed"
+        exit 1
+      }
 
 # Terraform Plan
 - task: TerraformTask@5
@@ -72,6 +133,7 @@ steps:
 # Terraform Apply
 - task: TerraformTask@5
   displayName: 'Terraform Apply'
+  condition: succeeded()
   inputs:
     provider: 'azurerm'
     command: 'apply'
