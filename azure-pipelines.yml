@@ -24,6 +24,22 @@ steps:
   inputs:
     terraformVersion: '1.10.5'
 
+# Verify Terraform
+- task: PowerShell@2
+  displayName: 'Verify Terraform'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $tfPath = Get-ChildItem -Path "$(Agent.ToolsDirectory)\terraform" -Recurse -Filter "terraform.exe" | Select-Object -First 1
+      if ($tfPath) {
+        Write-Host "Terraform found at: $($tfPath.FullName)"
+        $env:PATH = "$($tfPath.DirectoryName);$env:PATH"
+        terraform --version
+      } else {
+        Write-Error "Terraform executable not found!"
+        exit 1
+      }
+
 # Verify Python
 - task: PowerShell@2
   displayName: 'Verify Python'
@@ -90,24 +106,48 @@ steps:
       & "$destPath\tfsec.exe" --version
 
 # Terraform Init
-- task: TerraformTask@5
+- task: PowerShell@2
   displayName: 'Terraform Init'
   inputs:
-    provider: 'azurerm'
-    command: 'init'
+    targetType: 'inline'
     workingDirectory: '$(Build.SourcesDirectory)/tflinttfseccheckov'
-    backendServiceArm: 'automation'
-    backendAzureRmStorageAccountName: 'gauravbackupstorage'
-    backendAzureRmContainerName: 'tfstate'
-    backendAzureRmKey: 'backup.tfstate'
+    script: |
+      $tfPath = Get-ChildItem -Path "$(Agent.ToolsDirectory)\terraform" -Recurse -Filter "terraform.exe" | Select-Object -First 1
+      $env:PATH = "$($tfPath.DirectoryName);$env:PATH"
+
+      terraform init `
+        -backend-config="storage_account_name=gauravbackupstorage" `
+        -backend-config="container_name=tfstate" `
+        -backend-config="key=backup.tfstate" `
+        -backend-config="resource_group_name=$(backendResourceGroup)" `
+        -backend-config="subscription_id=$(subscriptionId)" `
+        -backend-config="tenant_id=$(tenantId)" `
+        -backend-config="client_id=$(clientId)" `
+        -backend-config="client_secret=$(clientSecret)"
+
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "Terraform Init failed."
+        exit 1
+      }
+      Write-Host "Terraform Init passed successfully."
 
 # Terraform Validate
-- task: TerraformTask@5
+- task: PowerShell@2
   displayName: 'Terraform Validate'
   inputs:
-    provider: 'azurerm'
-    command: 'validate'
+    targetType: 'inline'
     workingDirectory: '$(Build.SourcesDirectory)/tflinttfseccheckov'
+    script: |
+      $tfPath = Get-ChildItem -Path "$(Agent.ToolsDirectory)\terraform" -Recurse -Filter "terraform.exe" | Select-Object -First 1
+      $env:PATH = "$($tfPath.DirectoryName);$env:PATH"
+
+      terraform validate
+
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "Terraform Validate failed."
+        exit 1
+      }
+      Write-Host "Terraform Validate passed successfully."
 
 # Run TFLint
 - task: PowerShell@2
@@ -165,20 +205,38 @@ steps:
       Write-Host "Checkov passed successfully."
 
 # Terraform Plan
-- task: TerraformTask@5
+- task: PowerShell@2
   displayName: 'Terraform Plan'
   inputs:
-    provider: 'azurerm'
-    command: 'plan'
+    targetType: 'inline'
     workingDirectory: '$(Build.SourcesDirectory)/tflinttfseccheckov'
-    environmentServiceNameAzureRM: 'automation'
+    script: |
+      $tfPath = Get-ChildItem -Path "$(Agent.ToolsDirectory)\terraform" -Recurse -Filter "terraform.exe" | Select-Object -First 1
+      $env:PATH = "$($tfPath.DirectoryName);$env:PATH"
+
+      terraform plan
+
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "Terraform Plan failed."
+        exit 1
+      }
+      Write-Host "Terraform Plan passed successfully."
 
 # Terraform Apply
-- task: TerraformTask@5
+- task: PowerShell@2
   displayName: 'Terraform Apply'
   condition: succeeded()
   inputs:
-    provider: 'azurerm'
-    command: 'apply'
+    targetType: 'inline'
     workingDirectory: '$(Build.SourcesDirectory)/tflinttfseccheckov'
-    environmentServiceNameAzureRM: 'automation'
+    script: |
+      $tfPath = Get-ChildItem -Path "$(Agent.ToolsDirectory)\terraform" -Recurse -Filter "terraform.exe" | Select-Object -First 1
+      $env:PATH = "$($tfPath.DirectoryName);$env:PATH"
+
+      terraform apply -auto-approve
+
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error "Terraform Apply failed."
+        exit 1
+      }
+      Write-Host "Terraform Apply passed successfully."
